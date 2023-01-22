@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	cipher "worachanon226/gophercises/secret-api-cli/encrypt"
+	"worachanon226/gophercises/secret-api-cli/cipher"
 )
 
 func File(encodingKey, filepath string) *Vault {
@@ -34,24 +34,15 @@ func (v *Vault) loadKeyValues() error {
 		return nil
 	}
 	defer f.Close()
-
-	var sb strings.Builder
-	_, err = io.Copy(&sb, f)
-	if err != nil {
-		return nil
-	}
-
-	decryptedJSON, err := cipher.Decrypt(v.encodingKey, sb.String())
-	if err != nil {
-		return nil
-	}
-
-	r := strings.NewReader(decryptedJSON)
-	dec := json.NewDecoder(r)
-	err = dec.Decode(&v.keyVaules)
+	r, err := cipher.DecryptReader(v.encodingKey, f)
 	if err != nil {
 		return err
 	}
+	err = v.readKeyValues(r)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
