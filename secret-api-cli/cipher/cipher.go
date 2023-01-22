@@ -11,7 +11,7 @@ import (
 	"io"
 )
 
-func stream(key string, iv []byte) (cipher.Stream, error) {
+func encryptStream(key string, iv []byte) (cipher.Stream, error) {
 	block, err := newCipherBlock(key)
 	if err != nil {
 		return nil, err
@@ -25,12 +25,12 @@ func Encrypt(key, plaintext string) (string, error) {
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 		return "", err
 	}
-	stream, err := stream(key, iv)
+	stream, err := encryptStream(key, iv)
 	if err != nil {
 		return "", err
 	}
-
 	stream.XORKeyStream(ciphertext[aes.BlockSize:], []byte(plaintext))
+
 	return fmt.Sprintf("%x", ciphertext), nil
 }
 
@@ -39,7 +39,7 @@ func EncryptWriter(key string, w io.Writer) (*cipher.StreamWriter, error) {
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 		return nil, err
 	}
-	stream, err := stream(key, iv)
+	stream, err := encryptStream(key, iv)
 	if err != nil {
 		return nil, err
 	}
@@ -47,10 +47,7 @@ func EncryptWriter(key string, w io.Writer) (*cipher.StreamWriter, error) {
 	if n != len(iv) || err != nil {
 		return nil, errors.New("encrypt: unable to write full iv to writer")
 	}
-	return &cipher.StreamWriter{
-		S: stream,
-		W: w,
-	}, nil
+	return &cipher.StreamWriter{S: stream, W: w}, nil
 }
 
 func decryptStream(key string, iv []byte) (cipher.Stream, error) {
@@ -58,7 +55,6 @@ func decryptStream(key string, iv []byte) (cipher.Stream, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return cipher.NewCFBDecrypter(block, iv), nil
 }
 
@@ -71,15 +67,15 @@ func Decrypt(key, cipherHex string) (string, error) {
 	if len(ciphertext) < aes.BlockSize {
 		return "", errors.New("encrypt: cipher too short")
 	}
-
 	iv := ciphertext[:aes.BlockSize]
 	ciphertext = ciphertext[aes.BlockSize:]
+
 	stream, err := decryptStream(key, iv)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
-	stream.XORKeyStream(ciphertext, ciphertext)
 
+	stream.XORKeyStream(ciphertext, ciphertext)
 	return string(ciphertext), nil
 }
 
@@ -89,12 +85,10 @@ func DecryptReader(key string, r io.Reader) (*cipher.StreamReader, error) {
 	if n < len(iv) || err != nil {
 		return nil, errors.New("encrypt: unable to read the full iv")
 	}
-
 	stream, err := decryptStream(key, iv)
 	if err != nil {
 		return nil, err
 	}
-
 	return &cipher.StreamReader{S: stream, R: r}, nil
 }
 
