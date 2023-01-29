@@ -54,7 +54,7 @@ func sourceCodeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	lexer := lexers.Get("go")
 	iterator, _ := lexer.Tokenise(nil, b.String())
-	style := styles.Get("github")
+	style := styles.Get("vs")
 	if style == nil {
 		style = styles.Fallback
 	}
