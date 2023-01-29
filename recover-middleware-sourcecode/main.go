@@ -9,10 +9,13 @@ import (
 	"net/url"
 	"os"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"unicode"
 
-	"github.com/alecthomas/chroma/quick"
+	"github.com/alecthomas/chroma/formatters/html"
+	"github.com/alecthomas/chroma/lexers"
+	"github.com/alecthomas/chroma/styles"
 )
 
 func main() {
@@ -26,6 +29,11 @@ func main() {
 
 func sourceCodeHandler(w http.ResponseWriter, r *http.Request) {
 	path := r.FormValue("path")
+	lineStr := r.FormValue("line")
+	line, err := strconv.Atoi(lineStr)
+	if err != nil {
+		line = -1
+	}
 	file, err := os.Open(path)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -39,7 +47,22 @@ func sourceCodeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = quick.Highlight(w, b.String(), "go", "html", "monokai")
+	_ = line
+	var lines [][2]int
+	if line > 0 {
+		lines = append(lines, [2]int{line, line})
+	}
+	lexer := lexers.Get("go")
+	iterator, _ := lexer.Tokenise(nil, b.String())
+	style := styles.Get("github")
+	if style == nil {
+		style = styles.Fallback
+	}
+	formatter := html.New(html.TabWidth(2), html.WithLineNumbers(true), html.LineNumbersInTable(true), html.HighlightLines(lines))
+	w.Header().Set("Content-Type", "text")
+	fmt.Fprint(w, "<style>pre {font-size: 1.2em;}</style>")
+	formatter.Format(w, style, iterator)
+	// _ = quick.Highlight(w, b.String(), "go", "html", "monokai")
 
 }
 
