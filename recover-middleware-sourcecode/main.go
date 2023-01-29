@@ -88,9 +88,18 @@ func makeLinks(stack string) string {
 				break
 			}
 		}
+		var lineStr strings.Builder
+		for i := len(file) + 2; i < len(line); i++ {
+			if line[i] < '0' || line[i] > '9' {
+				break
+			}
+			lineStr.WriteByte(line[i])
+		}
+
 		v := url.Values{}
 		v.Set("path", file)
-		lines[li] = "\t<a href=\"/debug/?" + v.Encode() + "\">" + file + "</a>" + line[len(file)+1:]
+		v.Set("line", lineStr.String())
+		lines[li] = "\t<a href=\"/debug/?" + v.Encode() + "\">" + file + ":" + lineStr.String() + "</a>" + line[len(file)+2+len(lineStr.String()):]
 	}
 	return strings.Join(lines, "\n")
 }
